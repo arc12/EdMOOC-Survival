@@ -1,0 +1,73 @@
+```{r echo=FALSE}
+source("./Typical Curves.R")
+```
+
+Typical Survival Curves
+========================================================
+
+This shows the shapes of various survival-related curves, using some well-known parametric equations and parameter values comparable to those found in the data. Its purpose is to aid interpretation of the observed data by showing theoretical curves in the context of the MOOC last-access-time data.
+
+In all that follows, time is measured in days starting at time=0.
+
+Parametric Equations
+-------------
+
+These describe idealised theoretical survival/loss scenarios with a small number of parameters that may be adjusted such that the equation approximately matches observed data, i.e. "fitting".
+
+### Exponential
+
+Exponential decay occurs when a fixed proportion of a population is lost in equal time intervals. An exponential form for MOOC last access data would suggest that it is essentially random life events may explain the observation. This is the simplest explanation and if the quality of fit is good, we should adopt it.
+
+The equation for the fraction surviving, $S(t)$ to time $t$ is:
+$$S(t)=e^{-\lambda t}$$
+
+There is a single parameter, $\lambda$, which may be fitted to observed data and the half-life (the time interval for half of the population to be lost) is given by $ln(2)/\lambda$.
+
+### Weibull
+
+A second parameter, $\gamma$, may be added to create the (2-parameter) Weibull survival function:
+$$S(t)=e^{-\lambda t^\gamma}$$
+
+_Note that other parameterisations of the same mathematical form are used, and that there are different approaches between R packages and core, but the above approach is used for all quoted parameter values. An alternative forumalation uses $(1/\eta)^\gamma$ in place of $\lambda$. This parameterisation has the advantage that $\eta$ is the time when 36.8% of the population will remain, irrespective of the value of $\gamma$._
+
+This means that the proportion of the population that is lost in equal intervals of time changes with time. Fitting to observed data that indicates a value of $\gamma$ significantly different from 1, when the equation reduces to the exponential form, would show that students are more or less likely to discontinue access early in the course relative to the later stages. Values higher than 1 indicate an increasing drop-out rate and values less than 1 indicate a decreasing drop-out rate.
+
+### Log-Logistic
+
+This two-parameter function is of interest because it can model situations where the rate of loss may increase and decrease. Such a situation matches an intuition that the rate of loss of learners may initially increase and later decrease.
+
+$$S(t)=[{1+({\rho t})^\gamma}]^{-1}$$
+
+As for Weibull, alternative parameter definitions are in use, for example:
+$$S(t)=[{1+({t\over\alpha})^\beta}]^{-1}$$
+
+Survival Curves
+------------
+
+```{r fig.width=7, fig.height=6}
+plotS.ExpWeib(0.3,c(0.8,1.2))
+```
+
+With the same value of $\lambda$, the curves cross at $t=1$ day. This comprises a family of curves from a mathematical perspective but it may not be as intuitive as a family where the crossing point is chosen to be the point where half of the population has been lost, i.e. at first half-life of the exponential curve. In the following, the values of $\gamma$ have been chosen and $\lambda$ for the Weibull curves is varied to adjust the crossing-point.
+
+```{r fig.width=7, fig.height=6}
+plotS.ExpWeib.Half(0.3,c(0.8,1.2))
+```
+
+
+Hazard Function Curves
+---------
+
+These show what fraction of the population that survived until time=t but did not survive until time=t+1.
+
+```{r fig.width=7, fig.height=6}
+plotH.ExpWeib(0.3,c(0.8,1.2))
+```
+
+And with the half-life crossing parameter values.
+
+```{r fig.width=7, fig.height=6}
+plotH.ExpWeib.Half(0.3,c(0.8,1.2))
+```
+
+
