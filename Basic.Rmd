@@ -1,0 +1,156 @@
+Basic Survival Analysis
+========================================================
+
+This report looks at the patterns evident in the student last-access time data without considering any explanation according to learner attributes.
+
+```{r echo=FALSE, results='hide'}
+course.open.date<-as.numeric(as.POSIXct("2013-01-27"))
+courseIDs<-c("aiplan","astro","crit","edc","equine","intro")
+#in weeks relative to course.open.date, same order as courseIDs
+course.durations<-c(5,5,5,5,5,7)
+#number of weeks after course duration before right-censoring
+# i.e. people who access after this are right censored but people with last access before are "deaths"
+end.window<-4
+#these are used to label key dates. The names are used as the labels. Single char best
+annotationList<-list(aiplan=c(A=29,B=36, C=44),
+                     astro=c(A=29, B=51),
+                     crit=c(A=29,B=43),
+                     edc=c(A=22),
+                     equine=c(A=8, B=22,C=58),
+                     intro=c(A=22, B=61))
+## .... generic
+echo.sql<-TRUE # echo SQL statements
+echo.flag<-TRUE #echo R source
+fig.width.default<-5
+fig.height.default<-5
+options(knitr.table.format = 'markdown')
+read_chunk("./Basic.R")
+```
+
+```{r INIT, echo=FALSE, message=FALSE}
+#initialises the DB, sources helpers, and loads libraries.
+```
+
+**Although the official course start date was January 28, 2013, the de-facto start date (based on a burst of student access) was one day earlier. Hence, "day 0" is `r strftime(as.POSIXct(course.open.date, origin="1970-1-1"),format="%B %d, %Y")`.
+
+_This may be a consequence of time-zone differences, with the coursera platform being located in a zone that is 8 hours behind Edinburgh. The recorded time-stamps are observed to be in "platform time", rather than in the time-zone of either the course provider or the learner. The absence of learner-local time presents a minor limitation on analysis, although it could be partially-corrected by looking up the country of access based on IP addresses. This is not done, so the concept of "day" remains slightly fuzzy._
+
+The Raw Pattern of Last-Access
+--------
+
+The following plots show the fall-off of students (system users with access_group_id=4) according to their last access time. This does not include students who actively withdrew, for whom last access data is deleted.
+
+```{r KM_UNRESTRICTED, echo=FALSE, message=FALSE}
+#essentially all valid last-access times
+```
+
+```{r fig.width=fig.width.default, fig.height=fig.height.default, echo=FALSE}
+for(courseID in courseIDs){
+   plot.unrestricted(courseID)
+}
+```
+
+These plots all show the full range of last access times from 28 days prior to course start, up to the last registered access time.
+
+A number of observations may immediately be made:
+* In all courses, the maximum last access time is 86 days after the course start, although Introduction to Philosophy ended at seven rather than five weeks.
+* AI Planning and Astrobiology permitted access before the course start, during which period the shape of the curve differs from that folowing course start.
+* The fall-off in numbers is very steep to begin with and generally becomes less steep with time.
+* Most courses show some kind of rapid fall-of around one to three weeks after course end.
+* For all cases other than Introduction to Philosophy, the curve is smooth in the last three weeks. This indicates that there were very few people (relative to the whole cohort size) who were prevented from accessing the course materials by the "day 86" cutoff. There is a small discontinuity in slope in the Introduction to Philosophy course around day 79, which may be taken to indicate that a small number of students would have accessed the course materials again had they been able to after day 86.
+* Astrobiology and Equine Nutrition show an intriguing change in the shape of the curve around one week prior to course end.
+
+These curves include both students who are awarded an achievement status and those who do not. This means that they include students whose last access time is related to their completion of the required tasks.
+
+Segmenting the Population
+--------
+
+The concluding remarks in the previous section indicate that a better understanding will be gained if the two groups - those who gain an achievement status and those who do not - are treated separately.
+
+The following treatment will also separate out students whose last-access time appears at either end of the timescale. The principal analysis will concentrate on students whose last-access time is not before the course start date and is also no later than `r end.window` weeks after the end of the course ("end window"). Students whose last access time is after this end window are referred to as being "censored"; their presence is accounted for in the analysis as a block of individuals who are known to be present at the end but whose actual last access time is not used.
+
+This means that the clearly-different process in place before the course start, and the possible consequences of the "day 86" cutoff are excluded. The pre-course-start attrition may be of interest in understanding the relationship between MOOC participants and the course offering/design but the cutoff introduces only an incidental artefact.
+
+```{r PROPORTIONS, fig.width=fig.width.default, fig.height=fig.height.default, echo=FALSE}
+
+```
+
+Inspecting the Non-Achievers
+--------
+
+
+
+
+
+Time-to Last-Access for Achievers
+----------
+
+The terminology of "survival" is not particularly appropriate when considering those students who gain an achievement status. The essential facts of the analysis are, however, the same as if looking at the last access time: time-period to a non-repeatable event. Unfortunately, the time of the awarding of a statement of achievement is not available in the database and we must instead use the last access time as previously, and recognise that there is a rather imprecise relationship between these events.
+
+In either case, we would expect the courses to differ considerably since different requirements apply. Using the same time window as for the non-achievers above gives the following plots to show how the proportion of those who will achieve, but have not yet done so by a given time, falls. Bear in mind that the numbers of students, and the proportion of course participants, differs between each plot.
+
+```{r KM_ACHIEVED, echo=FALSE, message=FALSE}
+#essentially all valid last-access times
+```
+
+```{r fig.width=fig.width.default, fig.height=fig.height.default, echo=FALSE}
+for(courseID in courseIDs){
+   plot.achieved(courseID)
+}
+```
+
+In this case, we might consider "time=0" to be the point at which the last required component for a statement of achievement becomes available for submission against. In contrast, the rather odd observation is that some students with a last access time before the official course start date of January 28 actually received a Statement of Achievement.
+
+These should all be interpreted with a full knowledge of the assessment component issue dates, deadlines and grade penalties pertinent to each course, as well as the times when manual intervention in issuance of SoAs occurred and the liklihood that notification of award of a SoA would be likely to trigger a visit to the course site (as opposed to the generic coursera user "account" page.
+
+
+Pre-Start Attritition
+-----------
+
+To Do!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r echo=FALSE}
+## ****************************************************
+## Created: Adam Cooper, Cetis, Dec 2013
+## This source code was produced for The University of
+## Edinburgh DEI as part of their MOOC initiative.
+## ****************************************************
+
+## ***Made available using the The MIT License (MIT)***
+#The MIT License (MIT)
+#Copyright (c) 2013 Adam Cooper, University of Bolton
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy of
+#this software and associated documentation files (the "Software"), to deal in
+# the Software without restriction, including without limitation the rights to
+# use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+# the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+#    
+#    The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+# FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+# COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+# IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+## ************ end licence ***************
+```
