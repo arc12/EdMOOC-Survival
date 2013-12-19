@@ -33,6 +33,14 @@ niceLabels<-function(len){
    return (labels)
 }
 
+# decode courseID to a nice name
+courseNames<-c(aiplan="AI Planning",
+               astro="Astrobiology",
+               crit="Critical Thinking",
+               edc="E-learning and Digital Cultures",
+               equine="Equine Nutrition",
+               intro="Introduction to Philosophy")
+
 # map continent and country information (from uoe_ip_country) to a practically-useful concept of region
 # Regions are: UK & Ireland, N.America, Continental Europe, HK&China, India, S.America, Africa.
 # Also recodes Mexico to Central America (not Northern) and merges the Caribbean with C Am.
