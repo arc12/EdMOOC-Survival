@@ -1,58 +1,33 @@
+## ****************************************************
+## Created: Adam Cooper, Cetis, Dec 2013
+## This source code was produced for The University of
+## Edinburgh DEI as part of their MOOC initiative.
+## Basic survival analysis based on last access date
+## ****************************************************
+
+## Chunks intended for use with knitter in the Rmd file.
+## Can be used independently of knitr but NB that some config parameters are set in the Rmd
+
+## @knitr INIT
 library("survival")
 source("./dbConnect.R")
 source("./helpers.R")
+source("./parametricHelpers")
 
-course.open.date<-as.numeric(as.POSIXct("2013-01-28"))
-courseIDs<-c("aiplan","astro","crit","edc","equine","intro")
-#in weeks relative to course.open.date, same order as courseIDs
-course.durations<-c(5,5,5,5,5,7)
-#number of weeks after course duration before right-censoring
-# i.e. people who access after this are right censored but people with last access before are "deaths"
-end.window<-4
-
-#these are used to label key dates. The names are used as the labels. Single char best
-annotationList<-list(aiplan=c(A=29,B=36, E=44),
-                     astro=c(A=29, B=51),
-                     crit=c(A=29,B=43),
-                     edc=c(A=22),
-                     equine=c(A=8, B=22,C=58),
-                     intro=c(A=22, B=61))
-
-
-dayFactor<-86400 #seconds in 1 day
-weekFactor<-7*dayFactor #seconds in 1 week
-course.end.dates<-course.open.date+course.durations*weekFactor
-cut.dates<-course.end.dates+end.window*weekFactor
-#NB SQL returns truncated date values - see below - for use as date indexes
-cut.dIndices<-cut.dates/dayFactor
-course.open.dIndex<-course.open.date/dayFactor
-course.end.dIndices<-course.end.dates/dayFactor
-
-#last_access_time is a UNIX datetime number
-#rounds to nearest day. Multiply by 86400 to get a number to convert to a unix date
-sql<-"SELECT u.anon_user_id, TRUNCATE(last_access_time/86400,0) date_index from **gen.users u
- JOIN **gen.course_grades cg ON u.anon_user_id = cg.anon_user_id
- where access_group_id = 4 AND cg.achievement_level = 'none'
-AND"
-# there are actually a number of people whose last access precedes the course start but there is a clear discontinuity at course start so use this as the start of the data. The pre-start attrition should be investigated separately, if required
-sql.censored<-paste(sql, "last_access_time >= ##")
-sql.uncensored<-paste(sql, "last_access_time >= ", course.open.date, "AND last_access_time < ##")
-
-db<-conn()
-censoredList<- list.limit.SELECT(db, courseIDs, sql.censored, cut.dates, echo=T, schemaPrefix="vpodata_")
-uncensoredList<- list.limit.SELECT(db, courseIDs, sql.uncensored, cut.dates, echo=T, schemaPrefix="vpodata_")
-
-dbDisconnect(db)
-
-drawWeekLines<-function(end.Index, duration){
+##
+## a couple of procedures to decorate the current plot
+##
+drawWeekLines<-function(end.Index, duration, drawStart=FALSE){
    #these are relative to start course=day0
+   if(drawStart){      
+      abline(v=0, col="blue" )
+   }
    #and weekly intervals from course start
    abline(v=7*seq(1,duration+end.window), col="blue", lty=3 )
    # show official course end date
    abline(v=end.Index-course.open.dIndex, col="red")
 }
-
-#argument is a vector of days relative to the course.open.
+#argument is a vector of days relative to the x origin - i.e. course.open.
 # Names are used as labels. Use single character
 drawAnnotationLines<-function(annotations){
    if(length(annotations)>0){
@@ -65,12 +40,109 @@ drawAnnotationLines<-function(annotations){
    }
 }
 
-# supply with the results of surveg(... dist="weibull") and it returns the parameters lambda and gamma for Weibull distribution survival fn: S(t)=exp(-\lambda t^\gamma)
-weibull.pars<-function(weib.survreg){
-   pars=list(lambda=as.numeric(exp(-weib.survreg$coefficient/weib.survreg$scale)),
-             gamma=1/weib.survreg$scale)
-   return(pars)
+dayFactor<-86400 #seconds in 1 day
+weekFactor<-7*dayFactor #seconds in 1 week
+course.end.dates<-course.open.date+course.durations*weekFactor
+cut.dates<-course.end.dates+end.window*weekFactor
+#NB SQL returns truncated date values - see below - for use as date indexes
+cut.dIndices<-cut.dates/dayFactor
+course.open.dIndex<-course.open.date/dayFactor
+course.end.dIndices<-course.end.dates/dayFactor
+names(course.end.dIndices)<-courseIDs
+
+#last_access_time is a UNIX datetime number
+#rounds to nearest day. Multiply by 86400 to get a number to convert to a unix date
+sql<-"SELECT u.anon_user_id, TRUNCATE(last_access_time/86400,0) date_index from **gen.users u
+ JOIN **gen.course_grades cg ON u.anon_user_id = cg.anon_user_id
+ where access_group_id = 4"
+# there are actually a number of people whose last access precedes the course start but there is a clear discontinuity at course start so use this as the start of the data. The pre-start attrition should be investigated separately, if required
+sql.censored<-paste(sql, "AND cg.achievement_level = 'none' AND last_access_time >= ##")
+sql.uncensored<-paste(sql, "AND cg.achievement_level = 'none' AND last_access_time >= ", course.open.date, "AND last_access_time < ##")
+#count learners whose achievement was not none. These are excluded from the survival analysis
+sql.achieved<-"SELECT  u.anon_user_id, TRUNCATE(last_access_time/86400,0) date_index from **gen.users u
+                  JOIN **gen.course_grades cg ON u.anon_user_id = cg.anon_user_id
+                     where access_group_id = 4 AND cg.achievement_level != 'none'"
+
+#this simply gets the full last-access data, which will not be used for "proper" analysis
+# but which puts our focus-period into context
+sql.unrestricted<-paste(sql, "AND last_access_time > ",  course.open.date-28*dayFactor)
+
+## ........ get the data
+db<-conn()
+censoredList<- list.limit.SELECT(db, courseIDs, sql.censored, cut.dates, echo=T, schemaPrefix="vpodata_")
+uncensoredList<- list.limit.SELECT(db, courseIDs, sql.uncensored, cut.dates, echo=T, schemaPrefix="vpodata_")
+achievedList<-list.SELECT(db,courseIDs,sql.achieved,echo=T,schemaPrefix="vpodata_")
+unrestrictedList<- list.SELECT(db, courseIDs, sql.unrestricted,  echo=T, schemaPrefix="vpodata_")
+dbDisconnect(db)
+
+##
+## @knitr KM_UNRESTRICTED
+##
+# compute survival estimeates for the unrestricted/uncensored data. includes SoA people
+unrestricted.KM.List<-list()
+for(i in 1:length(courseIDs)){
+   courseID <- courseIDs[i]
+   unrestricted<-unrestrictedList[[courseID]]
+   my.times <-unrestricted$date_index-course.open.dIndex #"death" times are >=1 (days)
+   my.events <-rep(1, length(unrestricted$date_index))
+   my.surv <- Surv(my.times,my.events)
+   #KM fit
+   my.KMest <- survfit(my.surv~1, conf.int=0.95)#type="kaplan-meier" is default
+   unrestricted.KM.List[[courseID]]<-my.KMest
 }
+#use this for plotting per-course results of the above treatment
+plot.unrestricted<-function(courseID){
+   KMest<-unrestricted.KM.List[[courseID]]
+   max.d<-max(KMest$time)
+   plot(KMest, main=courseNames[courseID], sub=paste("max=",max.d), xlab="t/days", ylab="Proportion Surviving to time=t, S(t)")
+   drawWeekLines(course.end.dIndices[courseID], max.d, TRUE)
+   legend(x=max.d-2, y=1.0,  xjust=1, bg="white", legend=c("course start","course end"), fill=c("blue","red"), cex=0.7)
+}
+
+##
+## @knitr KM_ACHIEVED
+##
+# compute achiievement-time estimeates for those with achievement != "none"
+achieved.KM.List<-list()
+for(i in 1:length(courseIDs)){
+   courseID <- courseIDs[i]
+   achieved<-achievedList[[courseID]]
+   my.times <-achieved$date_index-course.open.dIndex #"death" times are >=1 (days)
+   my.events <-rep(1, length(achieved$date_index))
+   my.surv <- Surv(my.times,my.events)
+   #KM fit
+   my.KMest <- survfit(my.surv~1, conf.int=0.95)#type="kaplan-meier" is default
+   achieved.KM.List[[courseID]]<-my.KMest
+}
+#use this for plotting per-course results of the above treatment
+plot.achieved<-function(courseID){
+   KMest<-achieved.KM.List[[courseID]]
+   max.d<-max(KMest$time)
+   plot(KMest, main=courseNames[courseID], sub=paste("max=",max.d), xlab="t/days", ylab="Proportion Not Yet Achieved by Time=t, S(t)")
+   drawWeekLines(course.end.dIndices[courseID], max.d, TRUE)
+   legend(x=max.d-2, y=1.0,  xjust=1, bg="white", legend=c("course start","course end"), fill=c("blue","red"), cex=0.7)
+}
+
+##
+## @knitr PROPORTIONS
+##
+## plot proportions in/out of the survival analysis
+props<-cbind(achievers = sapply(achievedList, function(x){length(x[,1])}),
+             "non-survivors"=sapply(uncensoredList, function(x){length(x[,1])}),
+             censored=sapply(censoredList, function(x){length(x[,1])}))
+# add those who were lost prior to start date.
+props<-cbind(props,"pre-start loss"= sapply(unrestrictedList, function(x){length(x[,1])})-rowSums(props))
+#
+props<-props[,c(1,4,3,2)]#re-order
+cols<-rainbow(4)
+barplot(t(100*props/rowSums(props)), main="Proportions of Learners", col=cols, las=2)
+#mtext("(with access after start date)")
+legend(x=4.2,y=95,legend=rev(colnames(props)),fill=rev(cols), cex=0.7, bg="white")
+
+##
+## @knitr KM_RESTRICTED
+##
+## compute K-M survival estimates with chosen start and finish dates (i.e. with R-censoring)
 
 KMestList<-list()
 
@@ -107,38 +179,18 @@ for(i in 1:length(courseIDs)){
    expon<-survreg(formula = my.surv ~ 1, dist="exponential")
    print(summary(expon))
    
-   # last access by day of week
+}
+
+# last access by day of week
+for(i in 1:length(courseIDs)){
+   courseID <- courseIDs[i]
+   uncensored<-uncensoredList[[courseID]]
    la.dow<-table(1+(uncensored$date_index-course.open.dIndex) %% 7)
    plot(la.dow, main=paste("last access by day of week", courseID,sep=" - "), sub="day 1 is the first day of each course week")
 }
 
 
-##
-##
-x<-seq(0,4, 0.01)
-plot(x, exp(-x), type="l")
-lines(x,exp(-x^1.2), col="red")
-lines(x,exp(-x^0.8), col="green")
-ye<-exp(-x)
-yw12<-exp(-x^1.2)
-yw08<-exp(-x^0.8)
-plot(x, diff(ye), type="l")
-plot(x[-1], diff(ye), type="l")
-plot(x[-1], diff(yw12), type="l")
-lines(x[-1], diff(yw08), type="l", col="green")
-plot(x[-1], diff(ye), type="l")
-lines(x[-1], diff(yw12), col="red")
-lines(x[-1], diff(yw08), type="l", col="green")
-plot(x[-1], diff(ye)/ye, type="l")
-plot(x[-1], diff(ye)/ye[-1], type="l")
-lines(x[-1], diff(yw08)/yw08, type="l", col="green")
-lines(x[-1], diff(yw08)/yw08[-1], type="l", col="green")
-plot(x[-1], diff(yw08)/yw08[-1], type="l", col="green")
-plot(x[-1], diff(yw12)/yw12[-1], type="l", col="green")
-plot(x[-1], diff(yw08)/yw08[-1], type="l", col="green")
-plot(x[-1], diff(yw12)/yw12[-1], type="l", col="green")
-##
-##
+
 
 
 ##
@@ -159,9 +211,9 @@ plot(log(split.times), log(1/split.survival-1), type="S", main="Test log-logisti
 
 #I think a less negative Loglik indicates a better fit
 #Weibull Survival function S(t)=exp(-\lambda t^\gamma)
-expon<-survreg(formula = my.surv ~ 1, subset=(my.surv[,"time"]<=22), dist="exponential")
-weibull<-survreg(formula = my.surv ~ 1, subset=(my.surv[,"time"]<=22), dist="weibull")
-loglogistic<-survreg(formula = my.surv ~ 1, subset=(my.surv[,"time"]<=22), dist="loglogistic")
+expon<-survreg(formula = my.surv ~ 1, subset=(KMest$time<=22), dist="exponential")
+weibull<-survreg(formula = my.surv ~ 1, subset=(KMest$time<=22), dist="weibull")
+loglogistic<-survreg(formula = my.surv ~ 1, subset=(KMest$time<=22), dist="loglogistic")
 
 #test statistic to compare alternative distributions to null hypothesis of exponential
 D<- -2*expon$loglik[2] + 2*weibull$loglik[2]
@@ -172,7 +224,7 @@ p.weibull<-1-pchisq(D, weibull$df-expon$df)
 Dll<- -2*expon$loglik[2] + 2*loglogistic$loglik[2]
 p.ll<-1-pchisq(Dll, loglogistic$df-expon$df)
 
-save(file="Basic.RData", list=c("censoredList","uncensoredList", "KMestList"))
+save(file="Basic.RData", list=c("censoredList","uncensoredList", "KMestList", "unrestricted.KM.List"))
 
 #    #transform and plot the survivor function to see if it looks like ...
 #  plot(fit.times, -log(fit.survival), type="S", main="Test Exponential")
@@ -189,3 +241,26 @@ save(file="Basic.RData", list=c("censoredList","uncensoredList", "KMestList"))
 # expon<-survreg(formula = my.surv ~ 1, dist="exponential")
 # weibull<-survreg(formula = my.surv ~ 1, dist="weibull")
 # loglogistic<-survreg(formula = my.surv ~ 1, dist="loglogistic")
+
+
+## ***Made available using the The MIT License (MIT)***
+#The MIT License (MIT)
+#Copyright (c) 2013 Adam Cooper, University of Bolton
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy of
+#this software and associated documentation files (the "Software"), to deal in
+# the Software without restriction, including without limitation the rights to
+# use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+# the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+#    
+#    The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+# FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+# COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+# IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+## ************ end licence ***************
