@@ -10,20 +10,42 @@
 # This provides the chosen parameterisation forms and transformation from survreg fitting parameters
 # The S functions may appear to be a bit pointless but it makes for clarity in the face of >1 parameterisation in common use
 
-
-# supply with the results of surveg(... dist="weibull") and it returns the parameters lambda and gamma for Weibull distribution survival fn: S(t)=exp(-\lambda t^\gamma)
-weibull.pars<-function(weib.survreg){
-   pars=list(lambda=as.numeric(exp(-weib.survreg$coefficient/weib.survreg$scale)),
-             gamma=1/weib.survreg$scale)
+##
+## - transform the parameters returned by survreg into my preferred forms
+##
+# supply with the results of survreg. dist must be from: exponential|weibull|loglogistic
+# returns with a list of named parameters, according to the distribution
+# .. exponential: lambda in  S(t)=exp(-\lambda t)
+# .. weibull: labda and gamma in S(t)=exp(-\lambda t^\gamma)
+# .. loglogistic: rho and gamma in S(t)=[{1+({\rho t})^\gamma}]^{-1}
+nice.pars<-function(obj.survreg){
+   pars<-list()
+   if(obj.survreg$dist == "exponential"){
+      pars<-list(lambda=as.numeric(exp(-obj.survreg$coefficient)))
+   }else if (obj.survreg$dist == "weibull"){
+      pars<-list(lambda=as.numeric(exp(-obj.survreg$coefficient/obj.survreg$scale)),
+                gamma=1/obj.survreg$scale)
+   }else if (obj.survreg$dist == "loglogistic"){
+      pars<-list(rho=exp(-obj.survreg$coefficient),
+                gamma=1/obj.survreg$scale)
+   }
    return(pars)
 }
 
-# supply with the results of surveg(... dist="weibull") and it returns the parameters rho and gamma for survival fn: S(t)=[{1+({\rho t})^\gamma}]^{-1}
-loglogistic.pars<-function(ll.survreg){
-   pars=list(rho=exp(-loglogistic$coefficient),
-             gamma=1/loglogistic$scale)
-   return(pars)
-}
+
+# # supply with the results of surveg(... dist="weibull") and it returns the parameters lambda and gamma for Weibull distribution survival fn: S(t)=exp(-\lambda t^\gamma)
+# weibull.pars<-function(weib.survreg){
+#    pars=list(lambda=as.numeric(exp(-weib.survreg$coefficient/weib.survreg$scale)),
+#              gamma=1/weib.survreg$scale)
+#    return(pars)
+# }
+# 
+# # supply with the results of surveg(... dist="loglogistic") and it returns the parameters rho and gamma for survival fn: S(t)=[{1+({\rho t})^\gamma}]^{-1}
+# loglogistic.pars<-function(ll.survreg){
+#    pars=list(rho=exp(-loglogistic$coefficient),
+#              gamma=1/loglogistic$scale)
+#    return(pars)
+# }
 
 # Survival function for Weibull
 S.Weib<-function(T,lambda, gamma){
@@ -31,8 +53,8 @@ S.Weib<-function(T,lambda, gamma){
    return(S)
 }
 
-# Survival Function for log-logistic
-S.ll<-function(T, rho, gamma){
+# Survival Function for log-logistic: $$S(t)=[{1+({\rho t})^\gamma}]^{-1}$$
+S.LL<-function(T, rho, gamma){
    S<-1/(1+(T*rho)^gamma)
    return(S)
 }
