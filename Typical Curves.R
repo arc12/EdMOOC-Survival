@@ -7,12 +7,15 @@
 
 ##
 ##
-
-source("./parametricHelpers")
+## @knitr INIT
+source("./parametricHelpers.R")
 
 # Set the same time interval for all plots. Units = days but use 0.1 day as plotting interval
 plot.interval<-0.1
-t<-seq(0,35, plot.interval)
+if(!exists("max.day")){
+   max.day<-35
+}
+t<-seq(0,max.day, plot.interval)
 
 ##
 ## standard parameterised plots.
@@ -20,11 +23,11 @@ t<-seq(0,35, plot.interval)
 ##
 # plot an exponential and one or more Weibull Survival Function curves
 plotS.ExpWeib<-function(par.lambda, par.gamma, main="Survival Function"){
-   plot(t, exp(-par.lambda*t), type="l", xlab="time/days", ylab="S(t)",
+   plot(t, exp(-par.lambda*t), type="l", xlab="time/days", ylab="S(t)", ylim=c(0.0,1.0),
         main=bquote(atop(.(main),lambda==.(par.lambda))))
    cols<-rainbow(length(par.gamma))
    for(i in 1:length(par.gamma)){
-      lines(t,exp(-par.lambda*t^par.gamma[i]), col=cols[i])
+      lines(t,S.Weib(t,par.lambda,par.gamma[i]), col=cols[i])
    }
    leg<-c("Exponential", parse(text=paste("'Weibull,'~gamma==", par.gamma,sep="")))
    legend("topright", legend=leg, fill=c("black", cols), cex=0.8)
@@ -33,16 +36,33 @@ plotS.ExpWeib<-function(par.lambda, par.gamma, main="Survival Function"){
 # plot an exponential and one or more Weibull Survival Function curves
 # with the Weibull lambda values adjusted to give a cross-over at the half-life
 plotS.ExpWeib.Half<-function(par.lambda, par.gamma, main="Survival Function (half-life crossing)"){
-   plot(t, exp(-par.lambda*t), type="l", xlab="time/days", ylab="S(t)",
+   plot(t, exp(-par.lambda*t), type="l", xlab="time/days", ylab="S(t)", ylim=c(0.0,1.0),
         main=main)
    cols<-rainbow(length(par.gamma))
    t.half<-log(2)/par.lambda
    par.lambda.W<-par.lambda * t.half^(1-par.gamma)
    for(i in 1:length(par.gamma)){
-      lines(t,exp(-par.lambda.W[i]*t^par.gamma[i]), col=cols[i])
+      lines(t,S.Weib(t,par.lambda.W[i],par.gamma[i]), col=cols[i])
    }
    leg<-c("Exponential", parse(text=paste("'Weibull,'~lambda==",round(par.lambda.W,3),"~gamma==", par.gamma,sep="")))
-   legend("topright", legend=leg, fill=c("black", cols), cex=0.8)
+   legend("topright", legend=leg, fill=c("black", cols), cex=0.8, bg="white")
+}
+
+# plot an exponential and one or more Log-Logistic Survival Function curves
+# with a cross-over at the half-life
+# params are: lambda for exp and gamma for L-L in $$S(t)=[{1+({\rho t})^\gamma}]^{-1}$$
+# rho is calculated from lambda (to get the crossing)
+plotS.ExpLL.Half<-function(par.lambda, par.gamma, main="Survival Function (half-life crossing)"){
+   plot(t, exp(-par.lambda*t), type="l", xlab="time/days", ylab="S(t)", ylim=c(0.0,1.0),
+        main=main)
+   cols<-rainbow(length(par.gamma))
+   par.rho<-par.lambda/log(2) # i.e. 1/ t.half
+   for(i in 1:length(par.gamma)){
+      lines(t,S.LL(t,par.rho,par.gamma[i]), col=cols[i])
+   }
+   leg<-c(parse(text=paste("'Exponential,'~lambda==",par.lambda,sep="")),
+         parse(text=paste("'Log-Logistic,'~rho==",round(par.rho,3),"~gamma==", par.gamma,sep="")))
+   legend("topright", legend=leg, fill=c("black", cols), cex=0.8, bg="white")
 }
 
 
@@ -54,14 +74,14 @@ plotH.ExpWeib<-function(par.lambda, par.gamma, main="Hazard Function"){
         main=bquote(atop(.(main),lambda==.(par.lambda))), ylim=c(-2*100*par.lambda,0.0))
    cols<-rainbow(length(par.gamma))
    for(i in 1:length(par.gamma)){
-      Sweib<-exp(-par.lambda*t^par.gamma[i])
+      Sweib<-S.Weib(t,par.lambda,par.gamma[i])
       #NB: since the time interval in t is plot.interval
       Hweib<-(100/plot.interval)*diff(Sweib)/Sweib[-length(Sweib)]      
       lines(tH,Hweib, col=cols[i])
    }
    
-   leg<-c("Exponential", parse(text=paste("'Weibull,'~gamma==", gamma,sep="")))
-   legend("topright", legend=leg, fill=c("black", cols), cex=0.8)
+   leg<-c("Exponential", parse(text=paste("'Weibull,'~gamma==", par.gamma,sep="")))
+   legend("topright", legend=leg, fill=c("black", cols), cex=0.8, bg="white")
 }
 
 plotH.ExpWeib.Half<-function(par.lambda, par.gamma, main="Hazard Function (half-life crossing)"){
@@ -73,16 +93,32 @@ plotH.ExpWeib.Half<-function(par.lambda, par.gamma, main="Hazard Function (half-
    t.half<-log(2)/par.lambda
    par.lambda.W<-par.lambda * t.half^(1-par.gamma)
    for(i in 1:length(par.gamma)){
-      Sweib<-exp(-par.lambda.W[i]*t^par.gamma[i])
+      Sweib<-S.Weib(t,par.lambda.W[i],par.gamma[i])
       #NB: since the time interval in t is plot.interval
       Hweib<-(100/plot.interval)*diff(Sweib)/Sweib[-length(Sweib)]      
       lines(tH,Hweib, col=cols[i])
    }   
    leg<-c("Exponential", parse(text=paste("'Weibull,'~lambda==",round(par.lambda.W,3),"~gamma==", par.gamma,sep="")))
-   legend("topright", legend=leg, fill=c("black", cols), cex=0.8)
+   legend("topright", legend=leg, fill=c("black", cols), cex=0.8, bg="white")
 }
 
-
+plotH.ExpLL.Half<-function(par.lambda, par.gamma, main="Hazard Function (half-life crossing)"){
+   Hexp<-rep(-100*par.lambda, length(t)-1)#omit last time value
+   tH<-t[-length(Hexp)]
+   plot(tH, Hexp , type="l", xlab="time/days", ylab="H(t)/%",
+        main=main, ylim=c(-2*100*par.lambda,0.0))
+   cols<-rainbow(length(par.gamma))
+   par.rho<-par.lambda/log(2) # i.e. 1/ t.half
+   for(i in 1:length(par.gamma)){
+      SLL<-S.LL(t,par.rho,par.gamma[i])
+      #NB: since the time interval in t is plot.interval
+      H<-(100/plot.interval)*diff(SLL)/SLL[-length(SLL)]      
+      lines(tH,H, col=cols[i])
+   }
+   leg<-c(parse(text=paste("'Exponential,'~lambda==",par.lambda,sep="")),
+          parse(text=paste("'Log-Logistic,'~rho==",round(par.rho,3),"~gamma==", par.gamma,sep="")))
+   legend("topright", legend=leg, fill=c("black", cols), cex=0.8, bg="white")
+}
 
 ##
 ##
