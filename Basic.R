@@ -95,7 +95,7 @@ plot.unrestricted<-function(courseID){
    KMest<-unrestricted.KM.List[[courseID]]
    max.d<-max(KMest$time)
    plot(KMest, main=courseNames[courseID], sub=paste("max=",max.d), xlab="t/days", ylab="Proportion Surviving to time=t, S(t)")
-   drawWeekLines(course.end.dIndices[courseID], max.d, TRUE)
+   drawWeekLines(course.end.dIndices[courseID], max.d/7, TRUE)
    legend(x=max.d-2, y=1.0,  xjust=1, bg="white", legend=c("course start","course end"), fill=c("blue","red"), cex=0.7)
 }
 
@@ -103,6 +103,7 @@ plot.unrestricted<-function(courseID){
 ## @knitr KM_ACHIEVED
 ##
 # compute achiievement-time estimeates for those with achievement != "none"
+# basically same as KM_UNRESTRICTED - refactor!
 achieved.KM.List<-list()
 for(i in 1:length(courseIDs)){
    courseID <- courseIDs[i]
@@ -119,7 +120,7 @@ plot.achieved<-function(courseID){
    KMest<-achieved.KM.List[[courseID]]
    max.d<-max(KMest$time)
    plot(KMest, main=courseNames[courseID], sub=paste("max=",max.d), xlab="t/days", ylab="Proportion Not Yet Achieved by Time=t, S(t)")
-   drawWeekLines(course.end.dIndices[courseID], max.d, TRUE)
+   drawWeekLines(course.end.dIndices[courseID], max.d/7, TRUE)
    legend(x=max.d-2, y=1.0,  xjust=1, bg="white", legend=c("course start","course end"), fill=c("blue","red"), cex=0.7)
 }
 
@@ -143,8 +144,8 @@ legend(x=4.2,y=95,legend=rev(colnames(props)),fill=rev(cols), cex=0.7, bg="white
 ## @knitr KM_RESTRICTED
 ##
 ## compute K-M survival estimates with chosen start and finish dates (i.e. with R-censoring)
-
-KMestList<-list()
+restricted.Surv.List<-list()#Surv object containing time and event data for the "restricted" range
+restricted.KM.List<-list()#Kaplan-Meier fit of Surv
 
 for(i in 1:length(courseIDs)){
    
@@ -159,27 +160,37 @@ for(i in 1:length(courseIDs)){
    my.times <-c(uncensored$date_index, rep(cut.dIndex, length(censored$date_index)))-course.open.dIndex+1 #"death" times are >=1 (days)
    my.events <-c(rep(1, length(uncensored$date_index)), rep(0, length(censored$date_index)))
    my.surv <- Surv(my.times,my.events)
+   restricted.Surv.List[[courseID]]<-my.surv
    
    #KM fit
    my.KMest <- survfit(my.surv~1, conf.int=0.95)#type="kaplan-meier" is default
-   KMestList[[courseID]]<-my.KMest
-   plot(my.KMest, main=paste("Kaplan-Meier",courseID, sep=" - "), xlim=c(min(my.times), max(my.times)), xlab="Days Since Course Start")
-   drawWeekLines(course.end.dIndex, duration)
+   restricted.KM.List[[courseID]]<-my.KMest   
+}
+# produces two plots: S and cumulative hazard.
+plot.restricted<-function(courseID){
+   my.KMest<-restricted.KM.List[[courseID]]
+   xlims<-c(min(my.KMest$time), max(my.KMest$time))
+   plot(my.KMest, main=paste("Kaplan-Meier",courseID, sep=" - "), xlim=xlims, xlab="Days Since Course Start")
+   drawWeekLines(course.end.dIndices[courseID], course.durations[courseID])
    drawAnnotationLines(annotationList[[courseID]])
    # if this is linear then decay is exponential
-   plot(my.KMest, main=paste("Cumulative Hazard Function (KM)",courseID, sep=" - "), sub="plot t vs -log(S)", xlim=c(min(my.times), max(my.times)), fun="cumhaz", xlab="Days Since Course Start")
-   drawWeekLines(course.end.dIndex, duration)
+   plot(my.KMest, main=paste("Cumulative Hazard Function (KM)",courseID, sep=" - "), sub="plot t vs -log(S)", xlim=xlims, fun="cumhaz", xlab="Days Since Course Start")
+   drawWeekLines(course.end.dIndices[courseID], course.durations[courseID])
    drawAnnotationLines(annotationList[[courseID]])
-   
-   #extract time and Survivor Function for manipulation
-   fit.times<-my.KMest$time
-   fit.survival<-my.KMest$surv
-   
+}
+fitExp.restricted<-function(courseID){
+   my.surv<-restricted.Surv.List[[courseID]]
    # fit the parametric expoential decay using "survreg"
    expon<-survreg(formula = my.surv ~ 1, dist="exponential")
    print(summary(expon))
-   
+   print(nice.pars(expon))
 }
+
+
+
+##
+## @knitr LA_DOW
+##
 
 # last access by day of week
 for(i in 1:length(courseIDs)){
@@ -224,7 +235,7 @@ p.weibull<-1-pchisq(D, weibull$df-expon$df)
 Dll<- -2*expon$loglik[2] + 2*loglogistic$loglik[2]
 p.ll<-1-pchisq(Dll, loglogistic$df-expon$df)
 
-save(file="Basic.RData", list=c("censoredList","uncensoredList", "KMestList", "unrestricted.KM.List"))
+save(file="Basic.RData", list=c("censoredList","uncensoredList", "restricted.KM.List","restricted.Surv.List", "unrestricted.KM.List", "achieved.KM.List"))
 
 #    #transform and plot the survivor function to see if it looks like ...
 #  plot(fit.times, -log(fit.survival), type="S", main="Test Exponential")
