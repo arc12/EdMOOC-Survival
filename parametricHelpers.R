@@ -11,6 +11,19 @@
 # The S functions may appear to be a bit pointless but it makes for clarity in the face of >1 parameterisation in common use
 
 ##
+## - take the distribution name as used by survreg and make a nicely capitalised version for display
+##
+nice.distname<-function(n){
+   niceNames<-c(exponential="Exponential",
+                weibull="Weibull",
+                loglogistic="Log-Logistic")
+   niceName<-niceNames[n]
+   if(is.na(niceName))niceName<-n
+   
+   return(niceName)
+}
+
+##
 ## - transform the parameters returned by survreg into my preferred forms
 ##
 # supply with the results of survreg. dist must be from: exponential|weibull|loglogistic
@@ -29,6 +42,7 @@ nice.pars<-function(obj.survreg){
       pars<-list(rho=exp(-obj.survreg$coefficient),
                 gamma=1/obj.survreg$scale)
    }
+   pars$dist<-obj.survreg$dist
    return(pars)
 }
 
@@ -47,9 +61,29 @@ nice.pars<-function(obj.survreg){
 #    return(pars)
 # }
 
+#return the value of a the parametric survival function with time=T
+#pars is the return list from nice.pars, which includes the distribution type
+S.generic<-function(T,pars){
+   S<-0
+   if(pars$dist == "exponential"){
+      S<-S.Exp(T,pars$lambda)
+   }else if (pars$dist == "weibull"){
+      S<-S.Weib(T,pars$lambda,pars$gamma)
+   }else if (pars$dist == "loglogistic"){
+      S<-S.LL(T,pars$rho,pars$gamma)
+   }
+   return(S)
+}
+
+# Survival function for exponential - trivial
+S.Exp<-function(T,lambda){
+   S<- exp(-lambda*T)
+   return(S)
+}
+
 # Survival function for Weibull
 S.Weib<-function(T,lambda, gamma){
-   S<- exp(-lambda*t^gamma)
+   S<- exp(-lambda*T^gamma)
    return(S)
 }
 
@@ -57,6 +91,33 @@ S.Weib<-function(T,lambda, gamma){
 S.LL<-function(T, rho, gamma){
    S<-1/(1+(T*rho)^gamma)
    return(S)
+}
+
+##
+## - parametric Hazard Functions, function args as for S.
+##       This is instantaneous hazard rate, not cumulative
+##
+H.generic<-function(T,pars){
+   S<-0
+   if(pars$dist == "exponential"){
+      H<-H.Exp(T,pars$lambda)
+   }else if (pars$dist == "weibull"){
+      H<-H.Weib(T,pars$lambda,pars$gamma)
+   }else if (pars$dist == "loglogistic"){
+      H<-H.LL(T,pars$rho,pars$gamma)
+   }
+   return(H)
+}
+H.Exp<-function(T,lambda){
+   return(rep(-lambda,length(T)))
+}
+H.Weib<-function(T,lambda, gamma){
+   H<- - lambda * gamma * T^(gamma-1)
+   return(H)
+}
+H.LL<-function(T, rho, gamma){
+   H<--(gamma * rho * (rho*T)^(gamma-1))/(1+(rho*T)^gamma)
+   return(H)
 }
 
 

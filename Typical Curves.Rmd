@@ -1,6 +1,14 @@
 ```{r echo=FALSE}
-source("./Typical Curves.R")
+max.day<-60
+fig.width.default<-5
+fig.height.default<-5
+options(knitr.table.format = 'markdown')
+read_chunk("./Typical Curves.R")
 ```
+```{r INIT, echo=FALSE, message=FALSE}
+#loads libraries and defines function
+```
+
 
 Typical Survival Curves
 ========================================================
@@ -34,40 +42,58 @@ This means that the proportion of the population that is lost in equal intervals
 
 ### Log-Logistic
 
-This two-parameter function is of interest because it can model situations where the rate of loss may increase and decrease. Such a situation matches an intuition that the rate of loss of learners may initially increase and later decrease.
+This two-parameter function is of interest because it can model situations where the rate of loss may increase and decrease. Such a situation matches an intuition that the rate of loss of learners may first increase from its initial value, for example once the easy/introductory material has been covered, and later decrease, for example when the segment of the population that remains is adequately equipped to deal with the material.
 
 $$S(t)=[{1+({\rho t})^\gamma}]^{-1}$$
 
-As for Weibull, alternative parameter definitions are in use, for example:
+This curve has the property that $S(t)$ will have fallen to one half when $t=1/\rho$, irrespective of the value of the shape parameter, $\gamma$. Values of $\gamma$ greater than one give the non-monotonic changes, whereas values less than one give a progressively-decreasing dropout rate, although differently-shaped to the Weibull.
+
+As for Weibull, alternative parameter definitions are in use but will not be used here, for example:
+
 $$S(t)=[{1+({t\over\alpha})^\beta}]^{-1}$$
 
 Survival Curves
 ------------
 
+```{r }
+demo.lambda<-0.036
+demo.Weibull.gamma<-c(0.8,1.2)
+demo.LL.gamma<-c(0.8,1.4)
+
 ```{r fig.width=7, fig.height=6}
-plotS.ExpWeib(0.3,c(0.8,1.2))
+plotS.ExpWeib(demo.lambda,demo.Weibull.gamma)
 ```
 
 With the same value of $\lambda$, the curves cross at $t=1$ day. This comprises a family of curves from a mathematical perspective but it may not be as intuitive as a family where the crossing point is chosen to be the point where half of the population has been lost, i.e. at first half-life of the exponential curve. In the following, the values of $\gamma$ have been chosen and $\lambda$ for the Weibull curves is varied to adjust the crossing-point.
 
 ```{r fig.width=7, fig.height=6}
-plotS.ExpWeib.Half(0.3,c(0.8,1.2))
+plotS.ExpWeib.Half(demo.lambda,demo.Weibull.gamma)
+```
+
+A similar family of curves to compare the exponential with the Log-Logistic
+
+```{r fig.width=7, fig.height=6}
+plotS.ExpLL.Half(demo.lambda,demo.LL.gamma)
 ```
 
 
 Hazard Function Curves
 ---------
 
-These show what fraction of the population that survived until time=t but did not survive until time=t+1.
+These show what fraction of the population that survived until time=t but did not survive until time=t+1. They make the differences between the shapes of the survival curves more clear.
 
 ```{r fig.width=7, fig.height=6}
-plotH.ExpWeib(0.3,c(0.8,1.2))
+plotH.ExpWeib(demo.lambda,demo.Weibull.gamma)
 ```
 
 And with the half-life crossing parameter values.
 
 ```{r fig.width=7, fig.height=6}
-plotH.ExpWeib.Half(0.3,c(0.8,1.2))
+plotH.ExpWeib.Half(demo.lambda,demo.Weibull.gamma)
 ```
 
+And also for the Log-Logistic curves with parameters as for the survival curves above.
 
+```{r fig.width=7, fig.height=6}
+plotH.ExpLL.Half(demo.lambda,demo.LL.gamma)
+```

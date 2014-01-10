@@ -7,22 +7,46 @@ This report looks at the patterns evident in the student last-access time data w
 course.open.date<-as.numeric(as.POSIXct("2013-01-27"))
 courseIDs<-c("aiplan","astro","crit","edc","equine","intro")
 #in weeks relative to course.open.date, same order as courseIDs
-course.durations<-c(5,5,5,5,5,7)
+course.durations<-c(aiplan=5,
+                    astro=5,
+                    crit=5,
+                    edc=5,
+                    equine=5,
+                    intro=7)
 #number of weeks after course duration before right-censoring
 # i.e. people who access after this are right censored but people with last access before are "deaths"
 end.window<-4
+
 #these are used to label key dates. The names are used as the labels. Single char best
-annotationList<-list(aiplan=c(A=29,B=36, C=44),
-                     astro=c(A=29, B=51),
-                     crit=c(A=29,B=43),
-                     edc=c(A=22),
-                     equine=c(A=8, B=22,C=58),
-                     intro=c(A=22, B=61))
+annotationList<-list(aiplan=c(A=30,B=37, C=45),
+                     astro=c(A=30, B=52),
+                     crit=c(A=30,B=44),
+                     edc=c(A=23),
+                     equine=c(A=9, B=23, C=59),
+                     intro=c(A=23, B=62))
+
+# date ranges for parametric form fitting. in days from course open date (day 0)
+fit1.start<-c(aiplan=0,
+                    astro=0,
+                    crit=0,
+                    edc=0,
+                    equine=0,
+                    intro=0)
+fit1.end<-c(aiplan=c(42,30),
+                    astro=c(49,30),
+                    crit=c(42,30),
+                    edc=c(56,23),
+                    equine=c(56,23,9),
+                    intro=c(56,23)) #each entry may be c(.., ..) if fitAndPlot used with sub.end arg
+
+
+
+
 ## .... generic
 echo.sql<-TRUE # echo SQL statements
 echo.flag<-TRUE #echo R source
-fig.width.default<-5
-fig.height.default<-5
+fig.width.default<-8
+fig.height.default<-8
 options(knitr.table.format = 'markdown')
 read_chunk("./Basic.R")
 ```
@@ -78,9 +102,116 @@ This means that the clearly-different process in place before the course start, 
 Inspecting the Non-Achievers
 --------
 
+This section is concerned with students whose last-access time is not before the course start date and is also no later than `r end.window` weeks after the end of the course, and who were not awarded a Statement of Achievement.
+
+Two plots are shown for each course. The first shows the fall-off in the above-specified group, i.e. the group's surivival function. A Kaplan-Meier Estimator is used to determine the likely survival curve for the observed data; the aparrent fuzziness of the curves is due to 95% confidence limits, which may be seen if the plots are viewed closely. The second shows the cumulative hazard function, for which a straight line indicates that the fall-off is exponential, i.e. that the proportion of loss in unit time remains the same at differing times.
+```{r KM_RESTRICTED, echo=FALSE}
+```
+```{r fig.width=fig.width.default, fig.height=fig.height.default, echo=FALSE}
+for(courseID in courseIDs){
+   plot.restricted(courseID)
+}
+```
+
+The removal of achievers has clearly simplified the shape of the curves, hence simplified attempts to explain the processes of attrition. Some general observations may be made from the survival curves:
+* The survival curves for all course are qualitatively similar, with a generally smooth and continuous decay.
+* Several survival curves show small but regular cycles where there seems to be a slightly larger fall-off on certain days of the week. This may be due to changes in log-in frequency on certain days of the week rather than being a consequence of a periodic event that is actually causing drop-out. Weekly cycles of activity are known to occur in MOOCs but the data is not available for the current cases. Variation between courses, with some having more prominent weekly "blips" than others, may be partially due to differing balance of participation across different time-zones.
+
+The cumulative hazard (CH) curves permit a more detailed appreciation of the fall-off:
+* There clearly are time-periods when the fall-off is close to being exponential, indicated by straight-line segments.
+* Courses generally have a period at the start where the CH bows slightly upwards, indicating a decrease in attrition rate.
+* Points of minor discontinuity, presumably caused by specific events, are more easily identified. Note that, since hazard is defined according to the proportion of survivors at that point of time, steps in the cumulative hazard function for the same number of drop-outs will be larger as time proceeds.
+
+A purely exponential decay throughout the time-period may be considered to be a statistical baseline; it represents the case where drop-out is uniform across time and across the population. This is not what would be expected for real-world courses; courses are non-uniform in time by design, and learners are non-uniform by nature of prior knowledge, educational level, motivation, culturally-based expectations, etc. Variation in learner characterists would lead to smooth curves with a shape other than exponential. Changes in the shape at different points in time, as observed, indicates either a one-off event or a transition in character of the course. It is not easy to decide whether such a course change would have effect on survival of specific groups of students or across all groups.
+
+Considering each course separately, and referring to the green markers on the plots:
+* AI Planning ....
+
+### Fitting Parametric Survival Functions
+
+In order to assess whether these survival curves for non-achievers do conform to an exponential decay a statistical fit was undertaken using the Survival package for R (specifically survreg). The exponential is the simplest parametric formula, with a single fittable parameter, and is compared against two two-parameter formulae: Weibull and Log-Logistic. **cross-reference Typical Curves**
+
+Each course is considered separately and, since the survival curves show a discontinuity around one or two weeks after the course end date (referred to as a "break point" below), as well as just prior to the course start, fitting is undertaken over a segment of time. The end of segment varies between courses, while always starting at "day 0" (as previously explained). People whose last access falls after the break-point are right-censored.
+
+This is not the only point at which there seems to be some kind of change. The cumulative hazard plots show evidence of events at day 23 or 30 so this earlier period will also be fit to a parametric form. At the present time, no fitting to the period between day 23 (or 30) and the later "break point" will be undertaken.
+
+```{r FITTING, echo=FALSE, message=FALSE}
+#defines a function for use below
+```
+
+#### AI Planning
+```{r fig.width=fig.width.default, fig.height=fig.height.default, echo=FALSE, message=FALSE}
+f<-fitAndPlot("aiplan",1)
+f<-fitAndPlot("aiplan",2)
+```
+
+The solid lines for the fitted curves indicate the date range for which the fit was undertaken and the dashed lines project the same curve to later times.
+
+#### Astrobiology
+```{r fig.width=fig.width.default, fig.height=fig.height.default, echo=FALSE, message=FALSE}
+f<-fitAndPlot("astro",1)
+f<-fitAndPlot("astro",2)
+```
+
+#### Critical Thinking
+```{r fig.width=fig.width.default, fig.height=fig.height.default, echo=FALSE, message=FALSE}
+f<-fitAndPlot("crit",1)
+f<-fitAndPlot("crit",2)
+```
+
+#### E-learning and Digital Cultures
+```{r fig.width=fig.width.default, fig.height=fig.height.default, echo=FALSE, message=FALSE}
+f<-fitAndPlot("edc",1)
+f<-fitAndPlot("edc",2)
+```
+
+
+#### Equine Nutririon
+```{r fig.width=fig.width.default, fig.height=fig.height.default, echo=FALSE, message=FALSE}
+f<-fitAndPlot("equine",1)
+f<-fitAndPlot("equine",2)
+```
+
+
+#### Introduction to Philosophy
+```{r fig.width=fig.width.default, fig.height=fig.height.default, echo=FALSE, message=FALSE}
+f<-fitAndPlot("intro",1)
+f<-fitAndPlot("intro",2)
+```
+
+
+### Fitting to prior knowledge
+
+There is very little prior knowledge to go on since the pre-course survey data and even basic demographic data is not available. We do have a proxy for country/region in IP address of last access. Although there is no particular reason - aside from largely unsubstantiated cultural stereotyping - to expect that this is a significant indicator of survival, we will investigate in the absence of more promising alternatives.
+
+For all of the following plots, for each course, only those regions with at least 100 participants on day 0 are plotted. Care must be taken in interpreting the plots since some regions, for example Africa, generally has less than a few hundred participants so the size of the confidence band may be sufficiently large to cover fitted survival curves that appear to be quite far away from it. Smaller samples are less likely to be representative of the population they are drawn from.
+
+```{r REGIONS, fig.width=fig.width.default, fig.height=fig.height.default, echo=FALSE, message=FALSE}
+
+```
+
+Applying a log-rank test to determine whether the region of the participant makes no significant difference to survival (i.e. the null hypothesis) produces the following p values. Most are sown as zero since they are exceptionally small in magnitude. Only for AI Planning is there insufficient evidence to reject the null hypothesis and that course will not be considered further in this section.
+
+```{r echo=FALSE}
+p.all<-NULL
+for(courseID in courseIDs){
+   p.all[courseID]=regionDiffs(courseID)$p
+}
+p.table<-rbind(t(p.all),log10(t(p.all)))
+rownames(p.table)<-c("p","log10(p)")
+kable(p.table)          
+}
+```
+
+Inspection of the plots for the other courses indicates that the survival curves for most regions tend to be close together and cross over, while some regions appear to be some distance separated. Furthermore, inspection of the plots indicates that it is not reasonable to generalise across _all_ courses; there are some course-specific features as well as recurrent patterns. Some observations and associated p statistics computed using "survdiff" configured for the log-rank (Mantel-Haenszel) test follow.
 
 
 
+### Fitting using early knowledge
+
+In the absence of much prior knowledge maybe we can consider survival from the end of, for example, the first week. Arguably it will generally be the case that capturing information from participation in a fraction of a course provides valuable information because it is from the same context as that under investigation.
+
+So: consider learners who log in at least once after the first full week, i.e. the week to the end of day 7 according to the counting approach declared above. Consider the number of video access events. Label the learner according to which quintile they fall in.
 
 Time-to Last-Access for Achievers
 ----------
@@ -114,6 +245,17 @@ To Do!
 
 
 
+References
+----------
+
+R Core Team (2013). R: A language and environment for statistical computing. R Foundation for
+  Statistical Computing, Vienna, Austria. URL http://www.R-project.org/.
+
+Therneau T (2013). _A Package for Survival Analysis in S_. R package version 2.37-4, <URL:
+http://CRAN.R-project.org/package=survival>.
+
+Terry M. Therneau and Patricia M. Grambsch (2000). _Modeling Survival Data: Extending the Cox Model_.
+Springer, New York. ISBN 0-387-98784-3.
 
 
 
@@ -123,9 +265,7 @@ To Do!
 
 
 
-
-
-```{r echo=FALSE}
+```{r SAVE, echo=FALSE}
 ## ****************************************************
 ## Created: Adam Cooper, Cetis, Dec 2013
 ## This source code was produced for The University of
