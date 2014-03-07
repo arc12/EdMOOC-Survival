@@ -318,14 +318,14 @@ fit1.H.lines<-function(f.pars, start, end, extend=NA){
 ## - convenience to fit and plot for one course
 #     sub.end is index of end within fit1.end
 fitAndPlot<-function(courseID, sub.end=1){
-   start<-fit1.start[courseID]
-   end<-fit1.end[courseID][sub.end]
+   start<-fit1.start[[courseID]]
+   end<-fit1.end[[courseID]][sub.end]
    #replot the survival curve with additional lines for fits
    plot.restricted(courseID,cumhaz=FALSE)
-   mtext(paste("with parametric forms fitted to day",end),cex=0.8)
+   mtext(paste("with parametric forms fitted to day",end),cex=1.2)
    f<-fit1(restricted.Surv.List[[courseID]],start,end)
    fit1.S.lines(f$pars,start,end, extend=7*(course.durations[courseID]+end.window))
-   mtext(paste("The best-fit parametric form (ignoring significance):",nice.distname(f$best.dist)), side=1, cex=0.5)
+   mtext(paste("The best-fit parametric form (ignoring significance):",nice.distname(f$best.dist)), side=1, line=-3, cex=1.0)
    return(f)
 }
 

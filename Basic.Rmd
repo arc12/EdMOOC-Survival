@@ -26,13 +26,13 @@ annotationList<-list(aiplan=c(A=30,B=37, C=45),
                      intro=c(A=23, B=62))
 
 # date ranges for parametric form fitting. in days from course open date (day 0)
-fit1.start<-c(aiplan=0,
+fit1.start<-list(aiplan=0,
                     astro=0,
                     crit=0,
                     edc=0,
                     equine=0,
                     intro=0)
-fit1.end<-c(aiplan=c(42,30),
+fit1.end<-list(aiplan=c(42,30),
                     astro=c(49,30),
                     crit=c(42,30),
                     edc=c(56,23),
@@ -200,7 +200,6 @@ for(courseID in courseIDs){
 p.table<-rbind(t(p.all),log10(t(p.all)))
 rownames(p.table)<-c("p","log10(p)")
 kable(p.table)          
-}
 ```
 
 Inspection of the plots for the other courses indicates that the survival curves for most regions tend to be close together and cross over, while some regions appear to be some distance separated. Furthermore, inspection of the plots indicates that it is not reasonable to generalise across _all_ courses; there are some course-specific features as well as recurrent patterns. Some observations and associated p statistics computed using "survdiff" configured for the log-rank (Mantel-Haenszel) test follow.
