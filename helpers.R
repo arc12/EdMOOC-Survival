@@ -2,6 +2,8 @@
 ## Created: Adam Cooper, Cetis, Oct 2013
 ## This source code was produced for The University of
 ## Edinburgh DEI as part of their MOOC initiative.
+## http://moocs.is.ed.ac.uk/
+##
 ## Various functions with utility value
 ## ****************************************************
 
