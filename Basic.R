@@ -9,6 +9,8 @@
 ## Can be used independently of knitr but NB that some config parameters are set in the Rmd
 
 ## @knitr INIT
+library("RMySQL")
+MySQL.driver <- MySQL()
 library("survival")
 source("./dbConnect.R")
 source("./helpers.R")

@@ -1,4 +1,4 @@
-Various "Survival Analysis" bits.
+Various "Survival Analysis" bits for Coursera.
 
 In the first instance, just looking at the pattern over time of "last access time".
 
@@ -11,3 +11,13 @@ Need to decide on an end date for right censoring. For example, at what point wo
 **for testing**, set this cutoff to be March 16th. People access aiplan until 23rd so 16th seems like a fair point to separate those who *might* have returned after 23rd from those who had probably dropped out. i.e. we assert "not sure what would have happened" for people who accessed on/after 16th.
 
 People who gain course_grades.achievement_level != 'none' are excluded since their last access does not signify drop-out.
+
+To Run the Code
+-----------
+A file dbConnect.R, which contains a function of the following is not in the repository to protect password disclosure.
+
+# make a connection to MySQL. Does not default schema if no argument
+conn<-function(schemaName=NULL){
+   return (dbConnect(MySQL.driver, user='user', dbname=schemaName, 
+                   host='host', password='password'))
+}
