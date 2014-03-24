@@ -9,6 +9,7 @@ read_chunk("./Typical Curves.R")
 #loads libraries and defines function
 ```
 
+EdMOOC-Survival: [Home](index.html) - [Typical Curves](Typical Curves.html) - [Analysis](Basic.html)
 
 Typical Survival Curves
 ========================================================
@@ -113,6 +114,12 @@ R Core Team (2013). R: A language and environment for statistical computing. R F
 Terry M. Therneau and Patricia M. Grambsch (2000). _Modeling Survival Data: Extending the Cox Model_.
 Springer, New York. ISBN 0-387-98784-3.
 
+About...
+--------
+The content - source code and outputs - in EdMOOC-Survival were created by Adam Cooper, Cetis, University of Bolton, 2014. The work was undertaken for The University of Edinburgh DEI as part of their MOOC initiative. More information and data analysis is online at http://moocs.is.ed.ac.uk. Source code for EdMOOC-Survival is in GitHub at https://github.com/arc12/EdMOOC-Survival.
+
+
+<p><a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/"><img alt="Creative Commons License" src="http://i.creativecommons.org/l/by-nc/4.0/88x31.png" class="cc-button"></a><br/><a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 International License</a></p>
 
 ```{r SAVE, echo=FALSE}
 ## ****************************************************
