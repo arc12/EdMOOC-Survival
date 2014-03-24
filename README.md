@@ -12,12 +12,31 @@ Need to decide on an end date for right censoring. For example, at what point wo
 
 People who gain course_grades.achievement_level != 'none' are excluded since their last access does not signify drop-out.
 
-To Run the Code
------------
-A file dbConnect.R, which contains a function of the following is not in the repository to protect password disclosure.
 
-# make a connection to MySQL. Does not default schema if no argument
-conn<-function(schemaName=NULL){
-   return (dbConnect(MySQL.driver, user='user', dbname=schemaName, 
-                   host='host', password='password'))
-}
+Raw Queries
+-----------
+The queries run on the MySQL data export from coursera are as follows (for AI Planning):
+
+
+Learners who did not have a statement of achievement and whose last access time was before the end of the time window used for analysis.
+> SELECT c.ip_continent continent, c.ip_country country, u.anon_user_id, TRUNCATE(last_access_time/86400,0) date_index from vpodata_aiplangen.users u
+    JOIN vpodata_aiplangen.uoe_ip_country c ON u.anon_user_id = c.anon_user_id
+    JOIN vpodata_aiplangen.course_grades cg ON u.anon_user_id = cg.anon_user_id
+          where access_group_id = 4 AND cg.achievement_level = 'none' AND last_access_time >=  1359244800 AND last_access_time < 1364688000
+
+Similar, but the learners whose last access time was (on or) after the end of the analysis window.
+> SELECT c.ip_continent continent, c.ip_country country, u.anon_user_id, TRUNCATE(last_access_time/86400,0) date_index from vpodata_aiplangen.users u
+    JOIN vpodata_aiplangen.uoe_ip_country c ON u.anon_user_id = c.anon_user_id
+    JOIN vpodata_aiplangen.course_grades cg ON u.anon_user_id = cg.anon_user_id
+          where access_group_id = 4 AND cg.achievement_level = 'none' AND last_access_time >= 1364688000
+
+Learners who gained a statement of achievement.
+> SELECT  u.anon_user_id, TRUNCATE(last_access_time/86400,0) date_index from vpodata_aiplangen.users u
+                   JOIN vpodata_aiplangen.course_grades cg ON u.anon_user_id = cg.anon_user_id
+                      where access_group_id = 4 AND cg.achievement_level != 'none'
+
+An unrestricted listing.
+> SELECT c.ip_continent continent, c.ip_country country, u.anon_user_id, TRUNCATE(last_access_time/86400,0) date_index from vpodata_aiplangen.users u
+    JOIN vpodata_aiplangen.uoe_ip_country c ON u.anon_user_id = c.anon_user_id
+    JOIN vpodata_aiplangen.course_grades cg ON u.anon_user_id = cg.anon_user_id
+          where access_group_id = 4 AND last_access_time >  1356825600
