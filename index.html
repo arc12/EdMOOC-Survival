@@ -1,10 +1,143 @@
 <html>
-   <head>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
       <title>MOOC Survival Analysis - Edinburgh Coursera Courses, Spring 2013</title>
+
+<style type="text/css">
+body, td {
+   font-family: sans-serif;
+   background-color: white;
+   font-size: 12px;
+   margin: 8px;
+}
+
+tt, code, pre {
+   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+
+h1 { 
+   font-size:2.2em; 
+}
+
+h2 { 
+   font-size:1.8em; 
+}
+
+h3 { 
+   font-size:1.4em; 
+}
+
+h4 { 
+   font-size:1.0em; 
+}
+
+h5 { 
+   font-size:0.9em; 
+}
+
+h6 { 
+   font-size:0.8em; 
+}
+
+a:visited {
+   color: rgb(50%, 0%, 50%);
+}
+
+pre {   
+   margin-top: 0;
+   max-width: 95%;
+   border: 1px solid #ccc;
+   white-space: pre-wrap;
+}
+
+pre code {
+   display: block; padding: 0.5em;
+}
+
+code.r, code.cpp {
+   background-color: #F8F8F8;
+}
+
+table, td, th {
+  border: none;
+}
+
+blockquote {
+   color:#666666;
+   margin:0;
+   padding-left: 1em;
+   border-left: 0.5em #EEE solid;
+}
+
+hr {
+   height: 0px;
+   border-bottom: none;
+   border-top-width: thin;
+   border-top-style: dotted;
+   border-top-color: #999999;
+}
+
+@media print {
+   * { 
+      background: transparent !important; 
+      color: black !important; 
+      filter:none !important; 
+      -ms-filter: none !important; 
+   }
+
+   body { 
+      font-size:12pt; 
+      max-width:100%; 
+   }
+       
+   a, a:visited { 
+      text-decoration: underline; 
+   }
+
+   hr { 
+      visibility: hidden;
+      page-break-before: always;
+   }
+
+   pre, blockquote { 
+      padding-right: 1em; 
+      page-break-inside: avoid; 
+   }
+
+   tr, img { 
+      page-break-inside: avoid; 
+   }
+
+   img { 
+      max-width: 100% !important; 
+   }
+
+   @page :left { 
+      margin: 15mm 20mm 15mm 10mm; 
+   }
+     
+   @page :right { 
+      margin: 15mm 10mm 15mm 20mm; 
+   }
+
+   p, h2, h3 { 
+      orphans: 3; widows: 3; 
+   }
+
+   h2, h3 { 
+      page-break-after: avoid; 
+   }
+}
+
+</style>
    </head>
    <body>
-      
-<h1>Various "Survival Analysis" bits for Coursera</h1>
+
+
+EdMOOC-Survival: <a href="index.html">Home</a> - <a href="Typical Curves.html">Typical Curves</a> - <a href="Basic.html">Analysis</a>
+
+<h1>EdMOOC-Survival: Survival Analysis on Edinburgh University Coursera MOOCS</h1>
 
 In the first instance, just looking at the pattern over time of "last access time".
 
@@ -21,12 +154,16 @@ People who gain course_grades.achievement_level != 'none' are excluded since the
 <h1>To Run the Code</h1>
 A file dbConnect.R, which contains a function of the following is not in the repository to protect password disclosure.
 
-# make a connection to MySQL. Does not default schema if no argument
+<pre># make a connection to MySQL. Does not default schema if no argument
 conn<-function(schemaName=NULL){
    return (dbConnect(MySQL.driver, user='user', dbname=schemaName, 
                    host='host', password='password'))
-}
+}</pre>
+
+<h2>About...</h2>
+<p>The content - source code and outputs - in EdMOOC-Survival were created by Adam Cooper, Cetis, University of Bolton, 2014. The work was undertaken for The University of Edinburgh DEI as part of their MOOC initiative. More information and data analysis is online at <a href="http://moocs.is.ed.ac.uk">http://moocs.is.ed.ac.uk</a>. Source code for EdMOOC-Survival is in <a href="https://github.com/arc12/EdMOOC-Survival">a GitHub repository</a>.</p>
 
 
+<p><a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/"><img alt="Creative Commons License" src="http://i.creativecommons.org/l/by-nc/4.0/88x31.png" class="cc-button"></a><br/><a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 International License</a></p>
    </body>
 </html>
